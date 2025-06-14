@@ -2,56 +2,41 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Universal File Dashboard</title>
+    <title>Smart File Dashboard</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-    <div class="container">
-        <h1>📂 Universal File Dashboard</h1>
+<div class="sidebar">
+    <h2>Sections</h2>
+    {% for sec in sections %}
+        <a href="/?section={{ sec }}" class="{{ 'active' if sec == current_section else '' }}">{{ sec }}</a>
+    {% endfor %}
+</div>
 
-        <form method="get" action="/">
-            <select name="section" onchange="this.form.submit()">
-                {% for sec in sections %}
-                    <option value="{{ sec }}" {% if sec == selected_section %}selected{% endif %}>{{ sec }}</option>
-                {% endfor %}
-            </select>
-            <input type="text" name="search" placeholder="Search files..." value="{{ search_query }}">
-            <button type="submit">🔍 Search</button>
-        </form>
+<div class="main">
+    <h1>{{ current_section }} Files</h1>
 
-        <form action="/upload" method="post" enctype="multipart/form-data" class="upload-form">
-            <input type="hidden" name="section" value="{{ selected_section }}">
-            <input type="file" name="file" required>
-            <button type="submit">⬆️ Upload</button>
-        </form>
-
-        <form action="/delete" method="post">
-            <input type="hidden" name="section" value="{{ selected_section }}">
-            <table>
-                <tr>
-                    <th>Select</th><th>File Name</th><th>Uploaded Time</th><th>Action</th>
-                </tr>
-                {% for file in files %}
-                <tr>
-                    <td><input type="checkbox" name="files" value="{{ file.name }}"></td>
-                    <td>{{ file.name }}</td>
-                    <td>{{ file.upload_time }}</td>
-                    <td>
-                        {% if file.name.endswith(('.png', '.jpg', '.jpeg', '.gif')) %}
-                            <a href="/view/{{ file.path }}" target="_blank">🖼️ Preview</a>
-                        {% elif file.name.endswith('.pdf') %}
-                            <a href="/view/{{ file.path }}" target="_blank">📄 View PDF</a>
-                        {% elif file.name.endswith(('.txt', '.md', '.docx')) %}
-                            <a href="/edit/{{ file.path }}" target="_blank">✏️ Edit</a>
-                        {% else %}
-                            <a href="/view/{{ file.path }}" download>⬇️ Download</a>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% endfor %}
-            </table>
-            <button type="submit">🗑️ Delete Selected</button>
-        </form>
+    <div class="upload-area" onclick="document.getElementById('fileInput').click();">
+        Drag & Drop or Click to Upload
+        <input type="file" id="fileInput" style="display:none;" onchange="uploadFile('{{ current_section }}')">
     </div>
+
+    <input type="text" id="search" placeholder="Search files..." onkeyup="searchFiles()">
+
+    <div class="file-list" id="fileList">
+        {% for file in files %}
+        <div class="file-card">
+            <p>{{ file }}</p>
+            <a href="/view/{{ current_section }}/{{ file }}" target="_blank">View</a>
+            {% if file.endswith('.txt') or file.endswith('.docx') %}
+            <button onclick="editFile('{{ current_section }}', '{{ file }}')">Edit</button>
+            {% endif %}
+            <button onclick="deleteFile('{{ current_section }}', '{{ file }}')">Delete</button>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 </html>
