@@ -2,17 +2,15 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Edit {{ filename }}</title>
+    <title>Edit File</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-    <div class="container">
-        <h2>✏️ Editing: {{ filename }}</h2>
-        <form method="post">
-            <textarea name="content" rows="20" cols="80">{{ content }}</textarea><br>
-            <button type="submit">💾 Save Changes</button>
-        </form>
-        <a href="/">⬅️ Back to Dashboard</a>
-    </div>
+    <h2>Editing: {{ filename }}</h2>
+    <form method="POST">
+        <textarea name="content" rows="20" cols="100">{{ content }}</textarea><br>
+        <button type="submit" onclick="return confirm('Are you sure to save changes?')">Save Changes</button>
+    </form>
+    <a href="/">Back to Dashboard</a>
 </body>
 </html>
