@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Excel Preview: {{filename}}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <h1>Excel Preview: {{filename}}</h1>
+    <div class="excel-table">
+        {{data|safe}}
+    </div>
+</body>
+</html>
