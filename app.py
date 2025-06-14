@@ -1,112 +1,102 @@
-# app.py
+from flask import Flask, render_template, request, redirect, url_for, send_from_directory, flash
 import os
-import mimetypes
 import shutil
 import webbrowser
-from flask import Flask, render_template, request, redirect, url_for, send_from_directory, flash, jsonify, render_template_string
 from werkzeug.utils import secure_filename
 from docx import Document
 import pandas as pd
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key_here'
+app.secret_key = 'supersecretkey'  # safe for local
+UPLOAD_FOLDER = os.path.join(os.getcwd(), 'data')
+ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'docx', 'xlsx'}
 
-BASE_DIR = os.path.abspath(os.path.dirname(__file__))
-DATA_DIR = os.path.join(BASE_DIR, 'data')
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
 SECTIONS = ['Store', 'Material', 'Employee']
-ALLOWED_EXTENSIONS = {'pdf', 'txt', 'docx', 'xlsx', 'xls', 'png', 'jpg', 'jpeg'}
-
-for section in SECTIONS:
-    os.makedirs(os.path.join(DATA_DIR, section), exist_ok=True)
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 @app.route('/')
 def index():
-    section_files = {}
-    for section in SECTIONS:
-        section_path = os.path.join(DATA_DIR, section)
-        files = os.listdir(section_path)
-        section_files[section] = files
-    return render_template('index.html', sections=SECTIONS, section_files=section_files)
+    section = request.args.get('section', 'Store')
+    search_query = request.args.get('search', '').lower()
+
+    files = []
+    section_path = os.path.join(UPLOAD_FOLDER, section)
+    if os.path.exists(section_path):
+        for file in os.listdir(section_path):
+            if search_query in file.lower():
+                files.append(file)
+    return render_template('index.html', files=files, sections=SECTIONS, current_section=section)
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
     section = request.form['section']
     if 'file' not in request.files:
-        flash('No file part')
-        return redirect(url_for('index'))
+        flash('No file part.', 'error')
+        return redirect(url_for('index', section=section))
     file = request.files['file']
     if file and allowed_file(file.filename):
         filename = secure_filename(file.filename)
-        file.save(os.path.join(DATA_DIR, section, filename))
-        flash('File uploaded successfully!')
-    return redirect(url_for('index'))
+        save_path = os.path.join(UPLOAD_FOLDER, section, filename)
+        file.save(save_path)
+        flash('File uploaded successfully.', 'success')
+    else:
+        flash('Invalid file type.', 'error')
+    return redirect(url_for('index', section=section))
+
+@app.route('/delete/<section>/<filename>')
+def delete_file(section, filename):
+    try:
+        os.remove(os.path.join(UPLOAD_FOLDER, section, filename))
+        flash('File deleted successfully.', 'success')
+    except Exception as e:
+        flash(f'Error deleting file: {str(e)}', 'error')
+    return redirect(url_for('index', section=section))
 
 @app.route('/view/<section>/<filename>')
 def view_file(section, filename):
-    file_path = os.path.join(DATA_DIR, section, filename)
+    filepath = os.path.join(UPLOAD_FOLDER, section, filename)
     ext = filename.rsplit('.', 1)[1].lower()
-    if ext in ['pdf', 'png', 'jpg', 'jpeg']:
-        return send_from_directory(os.path.join(DATA_DIR, section), filename)
-    elif ext == 'txt':
-        with open(file_path, 'r') as f:
-            content = f.read()
-        return render_template_string("""<h3>{{filename}}</h3><pre>{{content}}</pre><a href='/'>Back</a>""", filename=filename, content=content)
-    elif ext == 'docx':
-        doc = Document(file_path)
-        fullText = '\n'.join([para.text for para in doc.paragraphs])
-        return render_template_string("""<h3>{{filename}}</h3><pre>{{content}}</pre><a href='/'>Back</a>""", filename=filename, content=fullText)
-    elif ext in ['xlsx', 'xls']:
-        df = pd.read_excel(file_path)
-        return render_template_string("""<h3>{{filename}}</h3>{{ df.to_html() }}<br><a href='/'>Back</a>""", filename=filename, df=df)
+    if ext in ['txt', 'docx']:
+        return redirect(url_for('edit_file', section=section, filename=filename))
+    elif ext == 'xlsx':
+        df = pd.read_excel(filepath)
+        return render_template('excel_preview.html', data=df.to_html(), filename=filename, section=section)
     else:
-        return send_from_directory(os.path.join(DATA_DIR, section), filename)
-
-@app.route('/delete/<section>/<filename>', methods=['POST'])
-def delete_file(section, filename):
-    os.remove(os.path.join(DATA_DIR, section, filename))
-    flash('File deleted successfully!')
-    return redirect(url_for('index'))
+        return send_from_directory(os.path.join(UPLOAD_FOLDER, section), filename)
 
 @app.route('/edit/<section>/<filename>', methods=['GET', 'POST'])
 def edit_file(section, filename):
-    file_path = os.path.join(DATA_DIR, section, filename)
+    filepath = os.path.join(UPLOAD_FOLDER, section, filename)
     ext = filename.rsplit('.', 1)[1].lower()
+
     if request.method == 'POST':
-        new_content = request.form['content']
+        content = request.form['content']
         if ext == 'txt':
-            with open(file_path, 'w') as f:
-                f.write(new_content)
+            with open(filepath, 'w') as f:
+                f.write(content)
         elif ext == 'docx':
             doc = Document()
-            for line in new_content.split('\n'):
-                doc.add_paragraph(line)
-            doc.save(file_path)
-        flash('File updated successfully!')
-        return redirect(url_for('index'))
-    else:
-        content = ''
-        if ext == 'txt':
-            with open(file_path, 'r') as f:
-                content = f.read()
-        elif ext == 'docx':
-            doc = Document(file_path)
-            content = '\n'.join([para.text for para in doc.paragraphs])
-        return render_template('edit.html', section=section, filename=filename, content=content)
+            doc.add_paragraph(content)
+            doc.save(filepath)
+        flash('File edited successfully.', 'success')
+        return redirect(url_for('index', section=section))
 
-@app.route('/search', methods=['GET'])
-def search():
-    query = request.args.get('query').lower()
-    result_files = {}
-    for section in SECTIONS:
-        section_path = os.path.join(DATA_DIR, section)
-        files = [f for f in os.listdir(section_path) if query in f.lower()]
-        if files:
-            result_files[section] = files
-    return render_template('index.html', sections=SECTIONS, section_files=result_files)
+    if ext == 'txt':
+        with open(filepath, 'r') as f:
+            content = f.read()
+    elif ext == 'docx':
+        doc = Document(filepath)
+        content = '\n'.join([p.text for p in doc.paragraphs])
+    else:
+        flash('Unsupported file for editing.', 'error')
+        return redirect(url_for('index', section=section))
+
+    return render_template('edit.html', filename=filename, section=section, content=content)
 
 if __name__ == '__main__':
-    webbrowser.open_new('http://127.0.0.1:5000')
+    webbrowser.open("http://127.0.0.1:5000")
     app.run(debug=True)
