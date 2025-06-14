@@ -1,11 +1,62 @@
-body { display: flex; margin: 0; font-family: 'Segoe UI', sans-serif; }
-.sidebar { width: 200px; background: #333; color: #fff; padding: 20px; height: 100vh; }
-.sidebar a { display: block; color: #ccc; text-decoration: none; margin: 10px 0; padding: 5px; border-radius: 5px; }
-.sidebar a.active, .sidebar a:hover { background: #555; color: #fff; }
-.main { flex: 1; padding: 20px; background: #f4f4f4; }
-.upload-area { border: 2px dashed #999; padding: 20px; text-align: center; color: #666; cursor: pointer; margin-bottom: 20px; }
-.file-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
-.file-card { background: #fff; padding: 10px; border-radius: 8px; box-shadow: 0 0 5px #ccc; text-align: center; }
-.file-card button { margin: 5px; padding: 5px 10px; border: none; background: #007BFF; color: #fff; border-radius: 4px; cursor: pointer; }
-.file-card button:hover { background: #0056b3; }
-#search { padding: 10px; width: 100%; margin-bottom: 20px; }
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 20px;
+    background: #f4f7f8;
+    color: #333;
+}
+
+h1 {
+    text-align: center;
+    color: #4A90E2;
+}
+
+h2 {
+    color: #333;
+    border-bottom: 2px solid #ddd;
+}
+
+form {
+    margin: 10px 0;
+}
+
+input[type="file"], select, input[type="text"] {
+    padding: 5px;
+    margin-right: 10px;
+}
+
+button {
+    background-color: #4A90E2;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+button:hover {
+    background-color: #357ABD;
+}
+
+ul {
+    list-style-type: none;
+    padding: 0;
+}
+
+li {
+    padding: 4px;
+    border-bottom: 1px solid #ddd;
+}
+
+a {
+    margin-right: 10px;
+    text-decoration: none;
+    color: #4A90E2;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+.flashes {
+    color: green;
+}
