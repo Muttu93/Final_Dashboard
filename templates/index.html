@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Universal File Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>📂 Universal File Dashboard</h1>
+
+        <form method="get" action="/">
+            <select name="section" onchange="this.form.submit()">
+                {% for sec in sections %}
+                    <option value="{{ sec }}" {% if sec == selected_section %}selected{% endif %}>{{ sec }}</option>
+                {% endfor %}
+            </select>
+            <input type="text" name="search" placeholder="Search files..." value="{{ search_query }}">
+            <button type="submit">🔍 Search</button>
+        </form>
+
+        <form action="/upload" method="post" enctype="multipart/form-data" class="upload-form">
+            <input type="hidden" name="section" value="{{ selected_section }}">
+            <input type="file" name="file" required>
+            <button type="submit">⬆️ Upload</button>
+        </form>
+
+        <form action="/delete" method="post">
+            <input type="hidden" name="section" value="{{ selected_section }}">
+            <table>
+                <tr>
+                    <th>Select</th><th>File Name</th><th>Uploaded Time</th><th>Action</th>
+                </tr>
+                {% for file in files %}
+                <tr>
+                    <td><input type="checkbox" name="files" value="{{ file.name }}"></td>
+                    <td>{{ file.name }}</td>
+                    <td>{{ file.upload_time }}</td>
+                    <td>
+                        {% if file.name.endswith(('.png', '.jpg', '.jpeg', '.gif')) %}
+                            <a href="/view/{{ file.path }}" target="_blank">🖼️ Preview</a>
+                        {% elif file.name.endswith('.pdf') %}
+                            <a href="/view/{{ file.path }}" target="_blank">📄 View PDF</a>
+                        {% elif file.name.endswith(('.txt', '.md', '.docx')) %}
+                            <a href="/edit/{{ file.path }}" target="_blank">✏️ Edit</a>
+                        {% else %}
+                            <a href="/view/{{ file.path }}" download>⬇️ Download</a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </table>
+            <button type="submit">🗑️ Delete Selected</button>
+        </form>
+    </div>
+</body>
+</html>
