@@ -1,18 +1,17 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>Edit {{filename}}</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>Edit: {{ filename }}</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="/static/script.js"></script>
 </head>
 <body>
-    <div class="main">
-        <h1>Edit {{filename}}</h1>
-        <form method="POST">
-            <textarea name="content" rows="20" cols="100">{{content}}</textarea><br>
-            <button type="submit" onclick="return confirmEditSave()">Save Changes</button>
-        </form>
-    </div>
-    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <h2>Editing: {{ filename }}</h2>
+    <form method="POST">
+        <textarea name="content" rows="20" cols="100">{{ content }}</textarea><br>
+        <button type="submit" onclick="return confirmEdit();">Save Changes</button>
+    </form>
+    <br>
+    <a href="/">Back to Dashboard</a>
 </body>
 </html>
