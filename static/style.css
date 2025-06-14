@@ -1,63 +1,11 @@
-body {
-    font-family: 'Segoe UI', sans-serif;
-    background: #f0f2f5;
-    display: flex;
-}
-
-.sidebar {
-    width: 200px;
-    background: #333;
-    color: #fff;
-    padding: 15px;
-    height: 100vh;
-}
-
-.sidebar h2 {
-    text-align: center;
-}
-
-.sidebar a {
-    display: block;
-    padding: 8px;
-    margin: 5px 0;
-    background: #444;
-    text-decoration: none;
-    color: #fff;
-    border-radius: 4px;
-}
-
-.sidebar a.active {
-    background: #00bcd4;
-}
-
-.main {
-    flex-grow: 1;
-    padding: 20px;
-}
-
-.file-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 15px;
-}
-
-.file-card {
-    background: #fff;
-    padding: 10px;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-}
-
-.actions a {
-    margin-right: 10px;
-    text-decoration: none;
-    color: #00bcd4;
-}
-
-.flashes {
-    list-style: none;
-    padding: 0;
-}
-
-.flashes li.success { color: green; }
-.flashes li.error { color: red; }
+body { font-family: Arial; background: #f9f9f9; margin: 0; padding: 0; }
+h1 { background: #333; color: #fff; padding: 10px; }
+.sidebar { width: 200px; float: left; background: #ddd; height: 100vh; padding: 10px; }
+.sidebar a { display: block; padding: 8px; text-decoration: none; color: #000; margin-bottom: 5px; }
+.sidebar a.active { background: #555; color: #fff; }
+.content { margin-left: 220px; padding: 20px; }
+table { width: 100%; border-collapse: collapse; }
+th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+button { padding: 5px 10px; }
+.flash { color: green; }
+textarea { width: 90%; }
