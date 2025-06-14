@@ -6,49 +6,51 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-    <h1>📁 Smart File Dashboard</h1>
+    <div class="sidebar">
+        <h2>Sections</h2>
+        {% for sec in sections %}
+            <a href="/?section={{sec}}" class="{{ 'active' if sec==current_section else '' }}">{{sec}}</a>
+        {% endfor %}
+    </div>
 
-    <form method="GET" action="/search">
-        <input type="text" name="query" placeholder="Search files...">
-        <button type="submit">Search</button>
-    </form>
+    <div class="main">
+        <h1>{{current_section}} Files</h1>
+        <form method="GET" action="/">
+            <input type="hidden" name="section" value="{{current_section}}">
+            <input type="text" name="search" placeholder="Search files..." value="{{request.args.get('search','')}}">
+            <button type="submit">Search</button>
+        </form>
 
-    <form method="POST" action="/upload" enctype="multipart/form-data">
-        <select name="section">
-            {% for sec in sections %}
-            <option value="{{ sec }}">{{ sec }}</option>
-            {% endfor %}
-        </select>
-        <input type="file" name="file">
-        <button type="submit">Upload</button>
-    </form>
+        <form action="/upload" method="POST" enctype="multipart/form-data">
+            <input type="hidden" name="section" value="{{current_section}}">
+            <input type="file" name="file" required>
+            <button type="submit">Upload</button>
+        </form>
 
-    {% for section, files in section_files.items() %}
-        <h2>{{ section }}</h2>
-        <ul>
-            {% for file in files %}
-                <li>
-                    {{ file }}
-                    <a href="/view/{{ section }}/{{ file }}" target="_blank">View</a>
-                    <a href="/edit/{{ section }}/{{ file }}">Edit</a>
-                    <form method="POST" action="/delete/{{ section }}/{{ file }}" style="display:inline;">
-                        <button type="submit">Delete</button>
-                    </form>
-                </li>
-            {% endfor %}
-        </ul>
-    {% endfor %}
-
-    {% with messages = get_flashed_messages() %}
-        {% if messages %}
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
             <ul class="flashes">
-            {% for msg in messages %}
-                <li>{{ msg }}</li>
-            {% endfor %}
+              {% for category, message in messages %}
+                <li class="{{ category }}">{{ message }}</li>
+              {% endfor %}
             </ul>
-        {% endif %}
-    {% endwith %}
-  <script src="{{ url_for('static', filename='script.js') }}"></script>
+          {% endif %}
+        {% endwith %}
 
+        <div class="file-grid">
+            {% for file in files %}
+            <div class="file-card">
+                <p>{{file}}</p>
+                <div class="actions">
+                    <a href="/view/{{current_section}}/{{file}}" target="_blank">View</a>
+                    <a href="/edit/{{current_section}}/{{file}}">Edit</a>
+                    <a href="/delete/{{current_section}}/{{file}}" onclick="return confirmDelete(event, '{{file}}')">Delete</a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 </html>
