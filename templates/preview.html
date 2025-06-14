@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>View/Edit {{ filename }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <h1>Editing: {{ filename }}</h1>
+    <form method="POST" action="{{ url_for('edit_file', section=section, filename=filename) }}">
+        <textarea name="content" rows="30" cols="100">{{ content }}</textarea><br>
+        <button type="submit" onclick="return confirm('Are you sure to save changes?')">Save Changes</button>
+        <a href="{{ url_for('dashboard', section=section) }}">Back to Dashboard</a>
+    </form>
+</body>
+</html>
