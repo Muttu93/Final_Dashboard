@@ -1,102 +1,114 @@
 from flask import Flask, render_template, request, redirect, url_for, send_from_directory, flash
 import os
 import shutil
+import datetime
 import webbrowser
 from werkzeug.utils import secure_filename
 from docx import Document
-import pandas as pd
 
 app = Flask(__name__)
-app.secret_key = 'supersecretkey'  # safe for local
-UPLOAD_FOLDER = os.path.join(os.getcwd(), 'data')
-ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'docx', 'xlsx'}
+app.secret_key = 'your_secret_key'
 
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-
-SECTIONS = ['Store', 'Material', 'Employee']
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+DATA_DIR = os.path.join(BASE_DIR, 'data')
+SECTIONS = ['Employee', 'Material', 'Store']
+ALLOWED_EXTENSIONS = {'txt', 'pdf', 'docx', 'xlsx', 'png', 'jpg', 'jpeg'}
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+def get_files(section):
+    section_path = os.path.join(DATA_DIR, section)
+    files = []
+    if os.path.exists(section_path):
+        for filename in os.listdir(section_path):
+            filepath = os.path.join(section_path, filename)
+            if os.path.isfile(filepath):
+                modified_time = datetime.datetime.fromtimestamp(os.path.getmtime(filepath)).strftime('%Y-%m-%d %H:%M:%S')
+                files.append({'name': filename, 'mtime': modified_time})
+    return files
+
 @app.route('/')
 def index():
-    section = request.args.get('section', 'Store')
-    search_query = request.args.get('search', '').lower()
-
-    files = []
-    section_path = os.path.join(UPLOAD_FOLDER, section)
-    if os.path.exists(section_path):
-        for file in os.listdir(section_path):
-            if search_query in file.lower():
-                files.append(file)
-    return render_template('index.html', files=files, sections=SECTIONS, current_section=section)
+    section = request.args.get('section', 'Employee')
+    query = request.args.get('query', '').lower()
+    files = get_files(section)
+    if query:
+        files = [f for f in files if query in f['name'].lower()]
+    return render_template('index.html', sections=SECTIONS, section=section, files=files, query=query)
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
-    section = request.form['section']
+    section = request.form.get('section')
     if 'file' not in request.files:
-        flash('No file part.', 'error')
-        return redirect(url_for('index', section=section))
+        flash('No file part')
+        return redirect(request.referrer)
     file = request.files['file']
+    if file.filename == '':
+        flash('No selected file')
+        return redirect(request.referrer)
     if file and allowed_file(file.filename):
         filename = secure_filename(file.filename)
-        save_path = os.path.join(UPLOAD_FOLDER, section, filename)
+        save_path = os.path.join(DATA_DIR, section, filename)
         file.save(save_path)
-        flash('File uploaded successfully.', 'success')
-    else:
-        flash('Invalid file type.', 'error')
+        flash('File uploaded successfully!')
     return redirect(url_for('index', section=section))
 
-@app.route('/delete/<section>/<filename>')
+@app.route('/delete/<section>/<filename>', methods=['POST'])
 def delete_file(section, filename):
-    try:
-        os.remove(os.path.join(UPLOAD_FOLDER, section, filename))
-        flash('File deleted successfully.', 'success')
-    except Exception as e:
-        flash(f'Error deleting file: {str(e)}', 'error')
+    file_path = os.path.join(DATA_DIR, section, filename)
+    if os.path.exists(file_path):
+        os.remove(file_path)
+        flash('File deleted successfully!')
     return redirect(url_for('index', section=section))
 
 @app.route('/view/<section>/<filename>')
 def view_file(section, filename):
-    filepath = os.path.join(UPLOAD_FOLDER, section, filename)
+    file_path = os.path.join(DATA_DIR, section, filename)
     ext = filename.rsplit('.', 1)[1].lower()
-    if ext in ['txt', 'docx']:
-        return redirect(url_for('edit_file', section=section, filename=filename))
-    elif ext == 'xlsx':
-        df = pd.read_excel(filepath)
-        return render_template('excel_preview.html', data=df.to_html(), filename=filename, section=section)
+    if ext == 'pdf' or ext in ['png', 'jpg', 'jpeg']:
+        return send_from_directory(os.path.join(DATA_DIR, section), filename)
+    elif ext == 'txt':
+        with open(file_path, 'r') as f:
+            content = f.read()
+        return render_template('preview.html', content=content, filename=filename, section=section)
+    elif ext == 'docx':
+        doc = Document(file_path)
+        content = '\n'.join([para.text for para in doc.paragraphs])
+        return render_template('preview.html', content=content, filename=filename, section=section)
     else:
-        return send_from_directory(os.path.join(UPLOAD_FOLDER, section), filename)
+        flash('File type not viewable')
+        return redirect(url_for('index', section=section))
 
 @app.route('/edit/<section>/<filename>', methods=['GET', 'POST'])
 def edit_file(section, filename):
-    filepath = os.path.join(UPLOAD_FOLDER, section, filename)
+    file_path = os.path.join(DATA_DIR, section, filename)
     ext = filename.rsplit('.', 1)[1].lower()
-
     if request.method == 'POST':
         content = request.form['content']
         if ext == 'txt':
-            with open(filepath, 'w') as f:
+            with open(file_path, 'w') as f:
                 f.write(content)
         elif ext == 'docx':
             doc = Document()
-            doc.add_paragraph(content)
-            doc.save(filepath)
-        flash('File edited successfully.', 'success')
+            for line in content.split('\n'):
+                doc.add_paragraph(line)
+            doc.save(file_path)
+        flash('File updated successfully!')
         return redirect(url_for('index', section=section))
-
-    if ext == 'txt':
-        with open(filepath, 'r') as f:
-            content = f.read()
-    elif ext == 'docx':
-        doc = Document(filepath)
-        content = '\n'.join([p.text for p in doc.paragraphs])
     else:
-        flash('Unsupported file for editing.', 'error')
-        return redirect(url_for('index', section=section))
-
-    return render_template('edit.html', filename=filename, section=section, content=content)
+        if ext == 'txt':
+            with open(file_path, 'r') as f:
+                content = f.read()
+        elif ext == 'docx':
+            doc = Document(file_path)
+            content = '\n'.join([para.text for para in doc.paragraphs])
+        else:
+            flash('File type not editable')
+            return redirect(url_for('index', section=section))
+        return render_template('edit.html', content=content, filename=filename, section=section)
 
 if __name__ == '__main__':
-    webbrowser.open("http://127.0.0.1:5000")
-    app.run(debug=True)
+    port = 5000
+    webbrowser.open(f'http://127.0.0.1:{port}')
+    app.run(debug=False, port=port)
