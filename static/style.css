@@ -1,62 +1,63 @@
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    margin: 20px;
-    background: #f4f7f8;
-    color: #333;
+    font-family: 'Segoe UI', sans-serif;
+    background: #f0f2f5;
+    display: flex;
 }
 
-h1 {
+.sidebar {
+    width: 200px;
+    background: #333;
+    color: #fff;
+    padding: 15px;
+    height: 100vh;
+}
+
+.sidebar h2 {
     text-align: center;
-    color: #4A90E2;
 }
 
-h2 {
-    color: #333;
-    border-bottom: 2px solid #ddd;
-}
-
-form {
-    margin: 10px 0;
-}
-
-input[type="file"], select, input[type="text"] {
-    padding: 5px;
-    margin-right: 10px;
-}
-
-button {
-    background-color: #4A90E2;
-    color: white;
-    border: none;
-    padding: 6px 12px;
-    cursor: pointer;
+.sidebar a {
+    display: block;
+    padding: 8px;
+    margin: 5px 0;
+    background: #444;
+    text-decoration: none;
+    color: #fff;
     border-radius: 4px;
 }
 
-button:hover {
-    background-color: #357ABD;
+.sidebar a.active {
+    background: #00bcd4;
 }
 
-ul {
-    list-style-type: none;
-    padding: 0;
+.main {
+    flex-grow: 1;
+    padding: 20px;
 }
 
-li {
-    padding: 4px;
-    border-bottom: 1px solid #ddd;
+.file-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
 }
 
-a {
+.file-card {
+    background: #fff;
+    padding: 10px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.actions a {
     margin-right: 10px;
     text-decoration: none;
-    color: #4A90E2;
-}
-
-a:hover {
-    text-decoration: underline;
+    color: #00bcd4;
 }
 
 .flashes {
-    color: green;
+    list-style: none;
+    padding: 0;
 }
+
+.flashes li.success { color: green; }
+.flashes li.error { color: red; }
