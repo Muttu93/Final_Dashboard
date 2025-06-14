@@ -1,98 +1,91 @@
-from flask import Flask, render_template, request, redirect, send_from_directory, url_for
+from flask import Flask, render_template, request, redirect, url_for, send_from_directory, flash, jsonify
 import os
-from datetime import datetime
 from werkzeug.utils import secure_filename
 from docx import Document
+import webbrowser
+import threading
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key_here'
+app.secret_key = 'supersecretkey'
 
-DATA_FOLDER = 'data'
-SECTIONS = ['Material', 'Store', 'Employee']
+BASE_DIR = 'data'
+SECTIONS = ['Store', 'Material', 'Employee']
 
-def get_files(section, search_query=None):
-    folder = os.path.join(DATA_FOLDER, section)
-    files = []
-    if not os.path.exists(folder):
-        os.makedirs(folder)
-    for filename in os.listdir(folder):
-        if search_query and search_query.lower() not in filename.lower():
-            continue
-        path = os.path.join(folder, filename)
-        upload_time = datetime.fromtimestamp(os.path.getmtime(path)).strftime('%Y-%m-%d %H:%M:%S')
-        files.append({'name': filename, 'path': f'{section}/{filename}', 'upload_time': upload_time})
-    return files
+ALLOWED_EXTENSIONS = {'pdf', 'txt', 'docx', 'jpg', 'jpeg', 'png'}
 
-@app.route('/', methods=['GET'])
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def get_files(section):
+    folder_path = os.path.join(BASE_DIR, section)
+    if not os.path.exists(folder_path):
+        os.makedirs(folder_path)
+    return os.listdir(folder_path)
+
+@app.route('/')
 def index():
-    section = request.args.get('section', SECTIONS[0])
-    search_query = request.args.get('search', '').strip()
-    files = get_files(section, search_query)
-    return render_template('index.html', sections=SECTIONS, selected_section=section, files=files, search_query=search_query)
+    section = request.args.get('section', 'Store')
+    files = get_files(section)
+    return render_template('index.html', sections=SECTIONS, current_section=section, files=files)
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
-    section = request.form.get('section')
-    if 'file' not in request.files or not section:
-        return redirect(url_for('index'))
+    section = request.form['section']
+    if 'file' not in request.files:
+        return jsonify({'status': 'fail', 'message': 'No file part'})
     file = request.files['file']
-    if file:
+    if file.filename == '':
+        return jsonify({'status': 'fail', 'message': 'No selected file'})
+    if file and allowed_file(file.filename):
         filename = secure_filename(file.filename)
-        folder = os.path.join(DATA_FOLDER, section)
-        os.makedirs(folder, exist_ok=True)
-        file.save(os.path.join(folder, filename))
-    return redirect(url_for('index', section=section))
+        folder_path = os.path.join(BASE_DIR, section)
+        file.save(os.path.join(folder_path, filename))
+        return jsonify({'status': 'success', 'message': 'File uploaded successfully'})
+    return jsonify({'status': 'fail', 'message': 'Invalid file type'})
 
-@app.route('/delete', methods=['POST'])
-def delete_files():
-    section = request.form.get('section')
-    files_to_delete = request.form.getlist('files')
-    folder = os.path.join(DATA_FOLDER, section)
-    for filename in files_to_delete:
-        file_path = os.path.join(folder, filename)
-        if os.path.exists(file_path):
-            os.remove(file_path)
-    return redirect(url_for('index', section=section))
+@app.route('/view/<section>/<filename>')
+def view_file(section, filename):
+    folder_path = os.path.join(BASE_DIR, section)
+    return send_from_directory(folder_path, filename)
 
-@app.route('/view/<path:filename>')
-def view_file(filename):
-    section = filename.split('/')[0]
-    file_path = filename[len(section)+1:]
-    return send_from_directory(os.path.join(DATA_FOLDER, section), file_path)
+@app.route('/delete/<section>/<filename>', methods=['POST'])
+def delete_file(section, filename):
+    folder_path = os.path.join(BASE_DIR, section)
+    file_path = os.path.join(folder_path, filename)
+    if os.path.exists(file_path):
+        os.remove(file_path)
+        return jsonify({'status': 'success', 'message': 'File deleted successfully'})
+    return jsonify({'status': 'fail', 'message': 'File not found'})
 
-@app.route('/edit/<path:filename>', methods=['GET', 'POST'])
-def edit_file(filename):
-    section = filename.split('/')[0]
-    file_path = filename[len(section)+1:]
-    full_path = os.path.join(DATA_FOLDER, section, file_path)
+@app.route('/edit/<section>/<filename>', methods=['GET', 'POST'])
+def edit_file(section, filename):
+    folder_path = os.path.join(BASE_DIR, section)
+    file_path = os.path.join(folder_path, filename)
 
     if request.method == 'POST':
-        content = request.form.get('content')
-        if filename.endswith('.txt') or filename.endswith('.md'):
-            with open(full_path, 'w', encoding='utf-8') as f:
-                f.write(content)
+        new_content = request.form['content']
+        if filename.endswith('.txt'):
+            with open(file_path, 'w') as f:
+                f.write(new_content)
         elif filename.endswith('.docx'):
             doc = Document()
-            doc.add_paragraph(content)
-            doc.save(full_path)
-        return redirect(url_for('index', section=section))
+            doc.add_paragraph(new_content)
+            doc.save(file_path)
+        return jsonify({'status': 'success', 'message': 'File saved successfully'})
 
-    file_content = ''
-    if filename.endswith('.txt') or filename.endswith('.md'):
-        with open(full_path, 'r', encoding='utf-8') as f:
-            file_content = f.read()
+    content = ""
+    if filename.endswith('.txt'):
+        with open(file_path, 'r') as f:
+            content = f.read()
     elif filename.endswith('.docx'):
-        doc = Document(full_path)
-        file_content = '\n'.join([para.text for para in doc.paragraphs])
+        doc = Document(file_path)
+        content = "\n".join([para.text for para in doc.paragraphs])
 
-    return render_template('edit.html', filename=filename, content=file_content)
+    return jsonify({'content': content})
+
+def open_browser():
+    webbrowser.open_new('http://127.0.0.1:5000/')
 
 if __name__ == '__main__':
-    import webbrowser
-    from threading import Timer
-
-    def open_browser():
-        webbrowser.open_new('http://127.0.0.1:5000/')
-
-    Timer(1, open_browser).start()
-    app.run(debug=True)
+    threading.Timer(1.25, open_browser).start()
+    app.run(debug=False)
