@@ -2,41 +2,51 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Smart File Dashboard</title>
+    <title>File Dashboard</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-<div class="sidebar">
-    <h2>Sections</h2>
-    {% for sec in sections %}
-        <a href="/?section={{ sec }}" class="{{ 'active' if sec == current_section else '' }}">{{ sec }}</a>
+    <h1>📁 Smart File Dashboard</h1>
+
+    <form method="GET" action="/search">
+        <input type="text" name="query" placeholder="Search files...">
+        <button type="submit">Search</button>
+    </form>
+
+    <form method="POST" action="/upload" enctype="multipart/form-data">
+        <select name="section">
+            {% for sec in sections %}
+            <option value="{{ sec }}">{{ sec }}</option>
+            {% endfor %}
+        </select>
+        <input type="file" name="file">
+        <button type="submit">Upload</button>
+    </form>
+
+    {% for section, files in section_files.items() %}
+        <h2>{{ section }}</h2>
+        <ul>
+            {% for file in files %}
+                <li>
+                    {{ file }}
+                    <a href="/view/{{ section }}/{{ file }}" target="_blank">View</a>
+                    <a href="/edit/{{ section }}/{{ file }}">Edit</a>
+                    <form method="POST" action="/delete/{{ section }}/{{ file }}" style="display:inline;">
+                        <button type="submit">Delete</button>
+                    </form>
+                </li>
+            {% endfor %}
+        </ul>
     {% endfor %}
-</div>
 
-<div class="main">
-    <h1>{{ current_section }} Files</h1>
-
-    <div class="upload-area" onclick="document.getElementById('fileInput').click();">
-        Drag & Drop or Click to Upload
-        <input type="file" id="fileInput" style="display:none;" onchange="uploadFile('{{ current_section }}')">
-    </div>
-
-    <input type="text" id="search" placeholder="Search files..." onkeyup="searchFiles()">
-
-    <div class="file-list" id="fileList">
-        {% for file in files %}
-        <div class="file-card">
-            <p>{{ file }}</p>
-            <a href="/view/{{ current_section }}/{{ file }}" target="_blank">View</a>
-            {% if file.endswith('.txt') or file.endswith('.docx') %}
-            <button onclick="editFile('{{ current_section }}', '{{ file }}')">Edit</button>
-            {% endif %}
-            <button onclick="deleteFile('{{ current_section }}', '{{ file }}')">Delete</button>
-        </div>
-        {% endfor %}
-    </div>
-</div>
-
-<script src="{{ url_for('static', filename='script.js') }}"></script>
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            <ul class="flashes">
+            {% for msg in messages %}
+                <li>{{ msg }}</li>
+            {% endfor %}
+            </ul>
+        {% endif %}
+    {% endwith %}
 </body>
 </html>
